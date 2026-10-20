@@ -15,9 +15,14 @@
 工作流同时提供 `PCL-fix-network-Debug.exe`。CI 会从仅包含 EXE 的分发目录运行更新禁用检查。
 目标电脑仍需安装 .NET Framework 4.8，运行时会生成配置与缓存文件。
 
-微软登录仍需自行注册的 Client ID；CurseForge 官方 API 仍需有效 API Key。
-可在构建仓库设置 `CLIENT_ID`、`CURSEFORGE_API_KEY` Secrets，或在运行环境设置
-`PCL_MS_CLIENT_ID`、`PCL_CURSEFORGE_API_KEY`。Modrinth 的公开下载接口无需这两项配置。
+微软登录需要有效的微软应用 Client ID，可以直接在 `设置 → 其他 → 微软登录` 中填写，
+无需重新构建。也可使用运行环境的 `PCL_MS_CLIENT_ID`，或在仓库设置同名 Actions Variable / Secret
+将其嵌入 EXE；旧的 `CLIENT_ID` 名称继续兼容。优先级为：运行环境变量 → 启动器设置 → 构建配置。
+没有配置时，启动器会在联网前提示配置 Client ID，不再发送空 `client_id` 请求。
+注册说明见 [微软登录配置](docs/microsoft-login.md)。
+
+CurseForge 官方 API 仍需有效 API Key，可配置 `CURSEFORGE_API_KEY` Secret 或运行环境的
+`PCL_CURSEFORGE_API_KEY`。Modrinth 的公开下载接口无需这两项配置。
 
 本地网络策略检查：`python .github/scripts/check_network_policy.py`。
 构建需要 Windows、支持 C# 13 的 MSBuild/.NET SDK 和 .NET Framework 4.8 开发工具；

@@ -2,6 +2,7 @@ Public Class MyMsgLogin
     Private Data As JObject
     Private UserCode As String '需要用户在网页上输入的设备代码
     Private DeviceCode As String '用于轮询的设备代码
+    Private ClientId As String '发起本次设备授权的微软应用。
     Private Website As String '验证网页的网址
 
 #Region "弹窗"
@@ -82,6 +83,7 @@ Public Class MyMsgLogin
     Private Sub Init()
         UserCode = Data("user_code")
         DeviceCode = Data("device_code")
+        ClientId = MicrosoftOAuth.RequireClientId(Data("pcl_client_id").ToString())
         Website = Data("verification_uri")
         '设置 UI
         LabTitle.Text = "登录 Minecraft"
@@ -106,12 +108,8 @@ Public Class MyMsgLogin
         Do While Not MyConverter.IsExited
             Try
                 Dim Result = NetRequestByClient(
-                    "https://login.microsoftonline.com/consumers/oauth2/v2.0/token", HttpMethod.Post,
-                    Content:=
-                        "grant_type=urn:ietf:params:oauth:grant-type:device_code" & "&" &
-                        "client_id=" & OAuthClientId & "&" &
-                        "device_code=" & DeviceCode & "&" &
-                        "scope=XboxLive.signin%20offline_access",
+                    MicrosoftOAuth.TokenEndpoint, HttpMethod.Post,
+                    Content:=MicrosoftOAuth.CreateDeviceTokenRequest(ClientId, DeviceCode),
                     ContentType:="application/x-www-form-urlencoded",
                     Timeout:=5000 + UnknownFailureCount * 5000,
                     MakeLog:=False, RequireJson:=True)

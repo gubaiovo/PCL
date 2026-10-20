@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>PCL</RootNamespace>
+    <AssemblyName>MicrosoftOAuth.Tests</AssemblyName>
+    <OptionStrict>On</OptionStrict>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Plain Craft Launcher 2/Modules/Minecraft/MicrosoftOAuth.vb" Link="MicrosoftOAuth.vb" />
+    <Compile Include="MicrosoftOAuth.Tests.vb" />
+  </ItemGroup>
+</Project>

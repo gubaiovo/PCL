@@ -560,14 +560,16 @@ NextInner:
             GoTo SkipLogin
         End If
         '尝试登录
+        Dim LoginClientId = MicrosoftOAuth.RequireClientId(MicrosoftOAuth.ResolveClientId(
+            Environment.GetEnvironmentVariable("PCL_MS_CLIENT_ID"), Settings.Get(Of String)("SystemMsClientId"), OAuthClientId))
         Dim OAuthTokens As (OAuthAccessToken As String, OAuthRefreshToken As String)
         If Input.OAuthRefreshToken = "" Then
             '无 RefreshToken
 Relogin:
-            OAuthTokens = MsLoginStep1New(Data)
+            OAuthTokens = MsLoginStep1New(Data, LoginClientId)
         Else
             '有 RefreshToken
-            OAuthTokens = MsLoginStep1Refresh(Input.OAuthRefreshToken)
+            OAuthTokens = MsLoginStep1Refresh(Input.OAuthRefreshToken, LoginClientId)
             If OAuthTokens.OAuthAccessToken = "Relogin" Then GoTo Relogin '要求重新打开登录网页认证
         End If
         If Data.IsCanceled Then Throw New OperationCanceledException
@@ -879,15 +881,16 @@ LoginFinish:
     End Function
 
     '微软登录步骤 1，原始登录：获取 DeviceCode 并开启登录网页
-    Private Function MsLoginStep1New(Data As LoaderTask(Of McLoginMs, McLoginResult)) As (OAuthAccessToken As String, OAuthRefreshToken As String)
+    Private Function MsLoginStep1New(Data As LoaderTask(Of McLoginMs, McLoginResult), ClientId As String) As (OAuthAccessToken As String, OAuthRefreshToken As String)
         '参考：https://learn.microsoft.com/zh-cn/entra/identity-platform/v2-oauth2-device-code
 
         '初始请求
 Retry:
         McLaunchLog("开始微软登录步骤 1/6（原始登录）")
-        Dim PrepareJson As JObject = NetRequestByClientRetry("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode", HttpMethod.Post,
-            Content:=$"client_id={OAuthClientId}&tenant=/consumers&scope=XboxLive.signin%20offline_access",
+        Dim PrepareJson As JObject = NetRequestByClientRetry(MicrosoftOAuth.DeviceCodeEndpoint, HttpMethod.Post,
+            Content:=MicrosoftOAuth.CreateDeviceCodeRequest(ClientId),
             ContentType:="application/x-www-form-urlencoded", RequireJson:=True).DeserializeJson()
+        PrepareJson("pcl_client_id") = ClientId '轮询使用本次请求的 ID，避免设置在登录过程中被修改。
         McLaunchLog("网页登录地址：" & PrepareJson("verification_uri").ToString)
 
         '弹窗
@@ -911,20 +914,20 @@ Retry:
         End If
     End Function
     '微软登录步骤 1，刷新登录：从 OAuth Code 或 OAuth RefreshToken 获取 {OAuth AccessToken, OAuth RefreshToken}
-    Private Function MsLoginStep1Refresh(Code As String) As (OAuthAccessToken As String, OAuthRefreshToken As String)
+    Private Function MsLoginStep1Refresh(Code As String, ClientId As String) As (OAuthAccessToken As String, OAuthRefreshToken As String)
         McLaunchLog("开始微软登录步骤 1/6（刷新登录）")
 
         Dim Result As String
         Try
-            Result = NetRequestByClientMultiple("https://login.live.com/oauth20_token.srf", HttpMethod.Post,
-                Content:=$"client_id={OAuthClientId}&refresh_token={StringUtils.FormUrlEscape(Code)}&grant_type=refresh_token&scope=XboxLive.signin%20offline_access",
+            Result = NetRequestByClientMultiple(MicrosoftOAuth.TokenEndpoint, HttpMethod.Post,
+                Content:=MicrosoftOAuth.CreateRefreshTokenRequest(ClientId, Code),
                 ContentType:="application/x-www-form-urlencoded",
                 Headers:={{"Accept-Language", "en-US,en;q=0.5"}, {"X-Requested-With", "XMLHttpRequest"}},
                 ThreadCount:=2)
         Catch ex As HttpRequestCodeException
             '修改错误列表时，同时检查 MyMsgLogin.xaml.vb 中的对应代码
             Dim Response = ex.Response
-            If Response.ContainsIgnoreCase("must sign in again") OrElse Response.ContainsIgnoreCase("password expired") OrElse
+            If Response.Contains("invalid_grant") OrElse Response.ContainsIgnoreCase("must sign in again") OrElse Response.ContainsIgnoreCase("password expired") OrElse
                (Response.Contains("refresh_token") AndAlso Response.ContainsIgnoreCase("is not valid")) OrElse '#269
                Response.ContainsIgnoreCase("expired") Then '#8611
                 Return ("Relogin", "")
@@ -1027,6 +1030,9 @@ Retry:
                 Throw New Exception("$登录尝试太过频繁，请等待几分钟后再试！")
             ElseIf ex.StatusCode = HttpStatusCode.Forbidden Then
                 Logger.Warn(ex, "微软登录第 4 步汇报 403")
+                If ex.Response.ContainsIgnoreCase("Invalid app registration") Then
+                    Throw New Exception("$此微软应用尚未获准访问 Minecraft Services。请检查应用 Client ID 和 Minecraft API 应用审批状态。")
+                End If
                 Throw New Exception("$当前 IP 的登录尝试异常。" & vbCrLf & "如果你使用了 VPN 或加速器，请把它们关掉或更换节点后再试！")
             ElseIf ex.StatusCode = HttpStatusCode.ServiceUnavailable Then
                 Logger.Warn(ex, "微软登录第 4 步汇报 503")

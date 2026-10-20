@@ -73,10 +73,18 @@ jobs:
       - name: Set build metadata and optional API credentials
         shell: pwsh
         env:
-          PCL_MS_CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          PCL_MS_CLIENT_ID: ${{ secrets.PCL_MS_CLIENT_ID || secrets.CLIENT_ID || vars.PCL_MS_CLIENT_ID || vars.CLIENT_ID }}
           PCL_CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
           BUILD_COMMIT: ${{ github.sha }}
         run: ./.github/scripts/prepare_build.ps1
+
+      - name: Test Microsoft login configuration
+        shell: pwsh
+        run: |
+          dotnet build .github/tests/MicrosoftOAuth.Tests.vbproj --configuration Release --verbosity minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & './.github/tests/bin/Release/net48/MicrosoftOAuth.Tests.exe'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Restore NuGet packages
         run: dotnet restore PCLCS/PCLCS.csproj

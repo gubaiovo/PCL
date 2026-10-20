@@ -92,6 +92,20 @@
                     <local:MyCheckBox Text="自动设置为中文" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="5" x:Name="CheckHelpChinese" local:SettingService.Key="ToolHelpChinese" />
                 </Grid>
             </local:MyCard>
+            <local:MyCard Margin="0,0,0,15" Title="微软登录">
+                <StackPanel Margin="25,40,25,18">
+                    <TextBlock Text="Client ID 是微软分配给启动器应用的公开编号。此第三方构建需要使用自己注册的微软应用。" TextWrapping="Wrap" Margin="0,0,0,12" Opacity="0.65" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="应用 Client ID" VerticalAlignment="Center" Margin="0,0,25,0" />
+                        <local:MyTextBox x:Name="TextMsClientId" Grid.Column="1" local:SettingService.Key="SystemMsClientId" MaxLength="128" HintText="使用构建中的配置"
+                            ToolTip="填写应用程序（客户端）ID，不是应用密钥。留空使用构建中的配置；PCL_MS_CLIENT_ID 环境变量优先于此设置。修改后重新登录即可生效。" />
+                    </Grid>
+                </StackPanel>
+            </local:MyCard>
             <local:MyCard Margin="0,0,0,15" Title="启动器">
                 <Grid Margin="25,40,25,20">
                     <Grid.ColumnDefinitions>

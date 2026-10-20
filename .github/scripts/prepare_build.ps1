@@ -11,13 +11,26 @@ foreach ($credential in @(
     @{ Field = 'CurseForgeAPIKey'; Variable = 'PCL_CURSEFORGE_API_KEY' }
 )) {
     $value = [Environment]::GetEnvironmentVariable($credential.Variable)
-    if ([string]::IsNullOrEmpty($value)) { continue }
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        if ($credential.Field -eq 'OAuthClientId') {
+            Write-Warning 'No Microsoft Client ID is embedded; configure it in the launcher settings before signing in.'
+        }
+        continue
+    }
     if ($value.Contains("`r") -or $value.Contains("`n")) { throw 'API credentials must be single-line values.' }
+    $value = $value.Trim()
     $escaped = $value.Replace('"', '""')
-    $prefix = 'Public ' + $credential.Field + ' As String = If(Environment.GetEnvironmentVariable("' + $credential.Variable + '"), '
-    $original = $prefix + '"")'
+    if ($credential.Field -eq 'OAuthClientId') {
+        $prefix = 'Public Const OAuthClientId As String = '
+        $original = $prefix + '""'
+        $replacement = $prefix + '"' + $escaped + '"'
+    } else {
+        $prefix = 'Public ' + $credential.Field + ' As String = If(Environment.GetEnvironmentVariable("' + $credential.Variable + '"), '
+        $original = $prefix + '"")'
+        $replacement = $prefix + '"' + $escaped + '")'
+    }
     if (-not $source.Contains($original)) { throw "Missing build placeholder for $($credential.Field)." }
-    $source = $source.Replace($original, $prefix + '"' + $escaped + '")')
+    $source = $source.Replace($original, $replacement)
 }
 
 [IO.File]::WriteAllText($secretPath, $source, [Text.UTF8Encoding]::new($false))
