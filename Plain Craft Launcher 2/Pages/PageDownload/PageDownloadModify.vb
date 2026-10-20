@@ -125,11 +125,6 @@ Public Class PageDownloadModify
         'OptiFine
         If Manifest IsNot Nothing Then
             SelectedOptiFine = Components.OptiFineEntry?.ToObject(Of DlOptiFineListEntry)()
-            If SelectedOptiFine IsNot Nothing AndAlso Not DlOptiFineListLoader.Output.Value.Any(Function(v) v.FileName = SelectedOptiFine.FileName) Then
-                '如果 OptiFine 是 pre 版，可能只在 BMCLAPI 下有，官方源删了。如果是这种缺失数据的情况，换用 BMCLAPI 源作为输出
-                If DlOptiFineListBmclapiLoader.State <> LoadState.Finished Then DlOptiFineListBmclapiLoader.WaitForExit()
-                DlOptiFineListLoader.Output = DlOptiFineListBmclapiLoader.Output
-            End If
         ElseIf OptiFineVersion IsNot Nothing AndAlso OptiFineVersion <> "未知版本" Then
             SelectedOptiFine = DlOptiFineListLoader.Output.Value.FirstOrDefault(
                 Function(v) v.Inherit = MinecraftVersion AndAlso
@@ -312,7 +307,7 @@ Public Class PageDownloadModify
         TextSelectName.ValidateRules = New ObjectModel.Collection(Of Validate) From {
             New ValidateFolderName(McFolderSelected & "versions", IgnoreList:=New List(Of String) From {OriginalName})}
         '修改页 UI
-        CardMinecraft.Visibility = If(RestrictMcDownload, Visibility.Collapsed, Visibility.Visible)
+        CardMinecraft.Visibility = Visibility.Visible
         BtnBack.Visibility = Visibility.Collapsed
         ImgLogo.Margin = New Thickness(15, 15, 0, 0)
         TextSelectName.Margin = New Thickness(56, 16, 16, 0)

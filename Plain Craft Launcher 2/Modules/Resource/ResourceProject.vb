@@ -571,7 +571,6 @@ Public Class ResourceProject
             Img.Source = PathImage & "Icons/NoIcon.png"
         Else
             Img.Source = LogoUrl
-            Img.FallbackSource = DlSourceModGet(LogoUrl)
         End If
     End Sub
     Public Function GetControlTitle(HasModLoaderDescription As Boolean) As (Title As String, SubTitle As String)

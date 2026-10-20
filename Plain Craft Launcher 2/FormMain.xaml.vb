@@ -432,18 +432,11 @@ Public Class FormMain
             Try
                 JavaInit() '延后到同意协议后再执行，避免在初次启动时进行进程操作
                 Thread.Sleep(100)
-                DlClientListMojangLoader.Start(1) 'PCL 会同时根据这里的加载结果决定是否使用官方源进行下载
+                DlClientListMojangLoader.Start()
                 RunCountSub()
-                ServerLoader.Start()
                 RunInNewThread(AddressOf TryClearTaskTemp, "TryClearTaskTemp", ThreadPriority.BelowNormal)
             Catch ex As Exception
                 Logger.Error(ex, "初始化加载池运行失败")
-            End Try
-            '清理自动更新文件
-            Try
-                FileUtils.Delete(Paths.Base & "PCL\Plain Craft Launcher 2.exe")
-            Catch ex As Exception
-                Logger.Warn(ex, "清理自动更新文件失败")
             End Try
             '上报
             Telemetry("启动")
@@ -619,7 +612,6 @@ Public Class FormMain
         On Error Resume Next
         IsProgramEnding = True
         AniControlEnabled += 1
-        If IsUpdateWaitingRestart Then UpdateRestart(False)
         If ReturnCode = ProcessReturnValues.Exception Then
             If Not IsLogShown Then
                 FeedbackInfo()
@@ -1076,10 +1068,6 @@ Public Class FormMain
                     RunInUi(Sub() FrmMain.PageChange(FormMain.PageType.TaskManager))
                     Return
                 Catch ex As Exception
-                    If RestrictMcDownload AndAlso ex.Message = "为遵守相关法律法规，PCL 暂时不再提供 MC 下载功能，非常抱歉 qwq……" Then
-                        Hint(ex.Message, HintType.Red)
-                        Return
-                    End If
                     If ex.IsCanceled Then Return
                     '安装失败，继续往后尝试
                 End Try

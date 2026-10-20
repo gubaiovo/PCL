@@ -376,10 +376,7 @@ Public Module ModJava
                         Static DownloadListWorker As New RedoableWorker(Of List(Of JavaDownloadInfo))(
                         Function(cancellationToken)
                             '下载 Mojang 提供的 Java 列表
-                            Dim IndexFileStr As String = NetRequestByLoader(DlVersionListOrder(
-                                {"https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"},
-                                {"https://bmclapi2.bangbang93.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"}
-                            ), IsJson:=True)
+                            Dim IndexFileStr As String = NetRequestByLoader({"https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"}, IsJson:=True)
                             cancellationToken?.ThrowIfCancellationRequested()
                             '解析 Java 列表
                             Dim Results = New List(Of JavaDownloadInfo)
@@ -547,7 +544,7 @@ NoForcedJava:
         '分析需要下载的 Java 文件列表
         Dim Address As String = Target.Java("manifest")("url")
         Logger.Info($"准备下载 Java {Target.Java("version")("name")}（{Target.ComponentName}）：{Address}")
-        Dim ListFileStr As String = NetRequestByLoader(DlSourceOrder({Address}, {Address.Replace("piston-meta.mojang.com", "bmclapi2.bangbang93.com")}), IsJson:=True)
+        Dim ListFileStr As String = NetRequestByLoader({Address}, IsJson:=True)
         Dim BaseDir As String = $"{Paths.AppData}.minecraft\runtime\{Target.ComponentName}\"
         Dim FilesToDownload As New List(Of NetFile)
         For Each File As JProperty In CType(ListFileStr.DeserializeJson(), JObject)("files")
@@ -559,7 +556,7 @@ NoForcedJava:
             End If
             Dim Url As String = Info("url")
             FilesToDownload.Add(New NetFile(
-                DlSourceOrder({Url}, {Url.Replace("piston-data.mojang.com", "bmclapi2.bangbang93.com")}),
+                {Url},
                 BaseDir & File.Name, Checker))
         Next
         Logger.Info($"该 Java 需要下载 {FilesToDownload.Count} 个文件，目标文件夹：{BaseDir}")

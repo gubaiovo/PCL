@@ -1806,14 +1806,9 @@ OnLoaded:
             Try
                 Logger.Info("开始获取 Authlib-Injector 下载信息")
                 Dim DownloadInfo As JObject = NetRequestByClientRetry(
-                        "https://authlib-injector.yushi.moe/artifact/latest.json",
-                        BackupUrl:="https://bmclapi2.bangbang93.com/mirrors/authlib-injector/artifact/latest.json", RequireJson:=True).DeserializeJson()
-                Dim DownloadAddress As String = DownloadInfo("download_url").ToString.
-                        Replace("bmclapi2.bangbang93.com/mirrors/authlib-injector", "authlib-injector.yushi.moe")
-                Result.Add(New NetFile({
-                    DownloadAddress,
-                    DownloadAddress.Replace("authlib-injector.yushi.moe", "bmclapi2.bangbang93.com/mirrors/authlib-injector")
-                }, TargetFile, New FileChecker With {.Hash = DownloadInfo("checksums")("sha256").ToString}))
+                    "https://authlib-injector.yushi.moe/artifact/latest.json", RequireJson:=True).DeserializeJson()
+                Result.Add(New NetFile({DownloadInfo("download_url").ToString}, TargetFile,
+                    New FileChecker With {.Hash = DownloadInfo("checksums")("sha256").ToString}))
             Catch ex As Exception
                 If FileUtils.Exists(TargetFile) Then
                     Logger.Warn(ex, "获取 Authlib-Injector 下载信息失败")
@@ -1866,15 +1861,6 @@ OnLoaded:
                    Token.Url.Contains(".tsrg") Then
                     Urls.AddRange(DlSourceLauncherOrMetaGet(Token.Url)) 'Mappings（#4425）
                 End If
-                If Token.Url.Contains("maven") Then
-                    Dim BmclapiUrl As String =
-                        Token.Url.Replace(Token.Url.Substring(0, Token.Url.IndexOfF("maven")), "https://bmclapi2.bangbang93.com/").Replace("maven.fabricmc.net", "maven").Replace("maven.minecraftforge.net", "maven").Replace("maven.neoforged.net/releases", "maven")
-                    If DlSourcePreferMojang Then
-                        Urls.Add(BmclapiUrl) '官方源优先
-                    Else
-                        Urls.Insert(0, BmclapiUrl) '镜像源优先
-                    End If
-                End If
             End If
             If Token.LocalPath.Contains("transformer-discovery-service") Then
                 'Transformer 文件释放
@@ -1883,10 +1869,10 @@ OnLoaded:
                 Continue For
             ElseIf Token.LocalPath.Contains("optifine\OptiFine") Then
                 'OptiFine 主 Jar
-                Dim OptiFineBase As String = Token.LocalPath.Replace(CustomMcFolder & "libraries\optifine\OptiFine\", "").Split("_")(0) & "/" & PathUtils.GetLastPart(Token.LocalPath).Replace("-", "_")
-                OptiFineBase = "/maven/com/optifine/" & OptiFineBase
-                If OptiFineBase.Contains("_pre") Then OptiFineBase = OptiFineBase.Replace("com/optifine/", "com/optifine/preview_")
-                Urls.Add("https://bmclapi2.bangbang93.com" & OptiFineBase)
+                If Checker.Check(Token.LocalPath) Is Nothing Then Continue For
+                Dim OptiFineFileName = PathUtils.GetLastPart(Token.LocalPath).Replace("OptiFine-", "OptiFine_")
+                If OptiFineFileName.Contains("_pre") Then OptiFineFileName = "preview_" & OptiFineFileName
+                Urls.Add(DlOptiFineDownloadGet(OptiFineFileName))
             ElseIf Urls.Count <= 2 Then
                 '普通文件
                 Urls.AddRange(DlSourceLibraryGet("https://libraries.minecraft.net" & Token.LocalPath.Replace(CustomMcFolder & "libraries", "").Replace("\", "/")))

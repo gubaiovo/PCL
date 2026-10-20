@@ -481,26 +481,8 @@ pause"
         '获取下载地址
         Loaders.Add(New LoaderTask(Of String, List(Of NetFile))("获取 OptiFine 主文件下载地址",
         Sub(Task As LoaderTask(Of String, List(Of NetFile)))
-            Dim Sources As New List(Of String)
-            'BMCLAPI 源
-            Dim BmclapiInherit As String = DownloadInfo.Inherit
-            If BmclapiInherit = "1.8" OrElse BmclapiInherit = "1.9" Then BmclapiInherit &= ".0" '#4281
-            If DownloadInfo.IsPreview Then
-                Sources.Add("https://bmclapi2.bangbang93.com/optifine/" & BmclapiInherit & "/HD_U_" & DownloadInfo.DisplayName.Replace(DownloadInfo.Inherit & " ", "").Replace(" ", "/"))
-            Else
-                Sources.Add("https://bmclapi2.bangbang93.com/optifine/" & BmclapiInherit & "/HD_U/" & DownloadInfo.DisplayName.Replace(DownloadInfo.Inherit & " ", ""))
-            End If
-            '官方源
-            Dim PageData As String
-            Try
-                PageData = NetRequestByClientRetry("https://optifine.net/adloadx?f=" & DownloadInfo.FileName,
-                    Encoding:=New UTF8Encoding(False), Accept:="text/html", SimulateBrowserHeaders:=True)
-                Task.Progress = 0.8
-                Sources.Add("https://optifine.net/" & PageData.RegexSearch("downloadx\?f=[^""']+").First)
-                Logger.Info($"OptiFine {DownloadInfo.DisplayName} 官方下载地址：{Sources.Last}")
-            Catch ex As Exception
-                Logger.Warn(ex, $"获取 OptiFine {DownloadInfo.DisplayName} 官方下载地址失败")
-            End Try
+            Dim Sources = {DlOptiFineDownloadGet(DownloadInfo.FileName)}
+            Task.Progress = 0.9
             '构造文件请求
             Task.Output = New List(Of NetFile) From {New NetFile(Sources.ToArray, Target, New FileChecker With {.MinSize = 300 * 1024})}
         End Sub) With {.ProgressWeight = 8})
@@ -632,26 +614,7 @@ Retry:
         '获取下载地址
         Loaders.Add(New LoaderTask(Of DlOptiFineListEntry, List(Of NetFile))("获取 OptiFine 下载地址",
         Sub(Task As LoaderTask(Of DlOptiFineListEntry, List(Of NetFile)))
-            Dim Sources As New List(Of String)
-            'BMCLAPI 源
-            Dim BmclapiInherit As String = DownloadInfo.Inherit
-            If BmclapiInherit = "1.8" OrElse BmclapiInherit = "1.9" Then BmclapiInherit &= ".0" '#4281
-            If DownloadInfo.IsPreview Then
-                Sources.Add("https://bmclapi2.bangbang93.com/optifine/" & BmclapiInherit & "/HD_U_" & DownloadInfo.DisplayName.Replace(DownloadInfo.Inherit & " ", "").Replace(" ", "/"))
-            Else
-                Sources.Add("https://bmclapi2.bangbang93.com/optifine/" & BmclapiInherit & "/HD_U/" & DownloadInfo.DisplayName.Replace(DownloadInfo.Inherit & " ", ""))
-            End If
-            '官方源
-            Dim PageData As String
-            Try
-                PageData = NetRequestByClientRetry("https://optifine.net/adloadx?f=" & DownloadInfo.FileName,
-                    Encoding:=New UTF8Encoding(False), Accept:="text/html", SimulateBrowserHeaders:=True)
-                Task.Progress = 0.8
-                Sources.Add("https://optifine.net/" & PageData.RegexSearch("downloadx\?f=[^""']+").First)
-                Logger.Info($"OptiFine {DownloadInfo.DisplayName} 官方下载地址：{Sources.Last}")
-            Catch ex As Exception
-                Logger.Warn(ex, $"获取 OptiFine {DownloadInfo.DisplayName} 官方下载地址失败")
-            End Try
+            Dim Sources = {DlOptiFineDownloadGet(DownloadInfo.FileName)}
             Task.Progress = 0.9
             '构造文件请求
             Task.Output = New List(Of NetFile) From {New NetFile(Sources.ToArray, TargetFolder, New FileChecker With {.MinSize = 64 * 1024})}
@@ -900,14 +863,13 @@ Retry:
                 Dim NeoForge As DlNeoForgeListEntry = Info
                 Dim Url As String = NeoForge.UrlBase & "-installer.jar"
                 Files.Add(New NetFile({
-                    Url.Replace("maven.neoforged.net/releases", "bmclapi2.bangbang93.com/maven"), Url
+                    Url
                 }, Target, New FileChecker With {.MinSize = 64 * 1024}))
             Else
                 'Forge
                 Dim Forge As DlForgeVersionEntry = Info
                 Files.Add(New NetFile({
-                    $"https://bmclapi2.bangbang93.com/maven/net/minecraftforge/forge/{Forge.Inherit}-{Forge.FileVersion}/forge-{Forge.Inherit}-{Forge.FileVersion}-{Forge.Category}.{Forge.FileExtension}",
-                    $"https://files.minecraftforge.net/maven/net/minecraftforge/forge/{Forge.Inherit}-{Forge.FileVersion}/forge-{Forge.Inherit}-{Forge.FileVersion}-{Forge.Category}.{Forge.FileExtension}"
+                    $"https://maven.minecraftforge.net/net/minecraftforge/forge/{Forge.Inherit}-{Forge.FileVersion}/forge-{Forge.Inherit}-{Forge.FileVersion}-{Forge.Category}.{Forge.FileExtension}"
                 }, Target, New FileChecker With {.MinSize = 64 * 1024, .Hash = Forge.Hash}))
             End If
 
@@ -1115,7 +1077,7 @@ Retry:
                 Dim Neo As DlNeoForgeListEntry = Info
                 Dim Url As String = Neo.UrlBase & "-installer.jar"
                 Files.Add(New NetFile({
-                    Url.Replace("maven.neoforged.net/releases", "bmclapi2.bangbang93.com/maven"), Url
+                    Url
                 }, InstallerAddress, New FileChecker With {.MinSize = 64 * 1024}))
             Else
                 'Forge
@@ -1123,8 +1085,7 @@ Retry:
                 Dim FileName As String =
                     $"{Forge.Inherit.Replace("-", "_")}-{Forge.FileVersion}/forge-{Forge.Inherit.Replace("-", "_")}-{Forge.FileVersion}-{Forge.Category}.{Forge.FileExtension}"
                 Files.Add(New NetFile({
-                    $"https://bmclapi2.bangbang93.com/maven/net/minecraftforge/forge/{FileName}",
-                    $"https://files.minecraftforge.net/maven/net/minecraftforge/forge/{FileName}"
+                    $"https://maven.minecraftforge.net/net/minecraftforge/forge/{FileName}"
                 }, InstallerAddress, New FileChecker With {.MinSize = 64 * 1024, .Hash = Forge.Hash}))
             End If
             Task.Output = Files
@@ -1410,7 +1371,7 @@ Retry:
         Else
             Version = sender.Parent.Parent.Tag
         End If
-        OpenWebsite($"https://files.minecraftforge.net/maven/net/minecraftforge/forge/{Version.Inherit}-{Version.VersionName}/forge-{Version.Inherit}-{Version.VersionName}-changelog.txt")
+        OpenWebsite($"https://maven.minecraftforge.net/net/minecraftforge/forge/{Version.Inherit}-{Version.VersionName}/forge-{Version.Inherit}-{Version.VersionName}-changelog.txt")
     End Sub
     Public Sub ForgeSave_Click(sender As Object, e As RoutedEventArgs)
         Dim Version As DlForgeVersionEntry
@@ -1438,21 +1399,16 @@ Retry:
         Sub()
             Try
                 Logger.Info("刷新 Forge 推荐版本缓存开始")
-                Dim Result As String = NetRequestByClientRetry("https://bmclapi2.bangbang93.com/forge/promos", RequireJson:=True)
-                If Result.Length < 1000 Then Throw New Exception("获取的结果过短（" & Result & "）")
-                Dim ResultJson As JContainer = Result.DeserializeJson()
-                '获取所有推荐版本列表
-                Dim RecommendedList As New List(Of String)
-                For Each Version As JObject In ResultJson
-                    If Version("name") Is Nothing OrElse Version("build") Is Nothing Then Continue For
-                    Dim Name As String = Version("name")
-                    If Not Name.EndsWithF("-recommended") Then Continue For
-                    '内容为："1.15.2":"31.2.0"
-                    RecommendedList.Add("""" & Name.Replace("-recommended", """:""" & Version("build")("version").ToString & """"))
+                Dim Result = NetRequestByClientRetry("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json", RequireJson:=True)
+                Dim Promos = CType(Result.DeserializeJson()("promos"), JObject)
+                Dim Recommended As New JObject
+                For Each Promo As JProperty In Promos.Properties()
+                    If Promo.Name.EndsWithF("-recommended") Then
+                        Recommended(Promo.Name.Replace("-recommended", "")) = Promo.Value.DeepClone()
+                    End If
                 Next
-                If RecommendedList.Count < 5 Then Throw New Exception("获取的推荐版本数过少（" & Result & "）")
-                '保存
-                Dim CacheJson As String = "{" & RecommendedList.Join(",") & "}"
+                If Not Recommended.HasValues Then Throw New Exception("Forge 官方源未返回推荐版本")
+                Dim CacheJson = Recommended.ToString()
                 FileUtils.Write(PathTemp & "Cache\ForgeRecommendedList.json", CacheJson)
                 Logger.Info("刷新 Forge 推荐版本缓存成功")
             Catch ex As Exception
@@ -1627,7 +1583,6 @@ Retry:
         Loaders.Add(New LoaderTask(Of String, List(Of NetFile))("获取 Fabric 主文件下载地址",
         Sub(Task As LoaderTask(Of String, List(Of NetFile)))
             Task.Output = New List(Of NetFile) From {New NetFile({
-                "https://bmclapi2.bangbang93.com/fabric-meta/v2/versions/loader/" & MinecraftName & "/" & FabricVersion & "/profile/json",
                 "https://meta.fabricmc.net/v2/versions/loader/" & MinecraftName & "/" & FabricVersion & "/profile/json"
             }, VersionFolder & Id & ".json", New FileChecker With {.IsJson = True})} '构造文件请求
         End Sub) With {.ProgressWeight = 0.5})

@@ -134,7 +134,6 @@ Public Class ResourceVersion
                 Dim Url = Data("downloadUrl").ToString
                 If Url = "" Then Url = $"https://edge.forgecdn.net/files/{CInt(.Id.ToString.Substring(0, 4))}/{CInt(.Id.ToString.Substring(4))}/{ .FileName}"
                 .DownloadUrls = ParseCurseForgeDownloadUrls(Url.Replace(.FileName, StringUtils.UrlEscape(.FileName))) '对脑残 CurseForge 的下载地址进行多种修正
-                .DownloadUrls.Add(DlSourceModGet(Url)) '添加镜像源；注意 MCIM 源不支持 URL 编码后的文件名，必须传入 URL 编码前的文件名
                 .DownloadUrls = .DownloadUrls.Distinct.ToList '最终去重
                 'Dependencies
                 If Data.ContainsKey("dependencies") Then
@@ -175,7 +174,7 @@ Public Class ResourceVersion
                 If CType(Data("files"), JArray).Any() Then '可能为空
                     Dim File As JToken = Data("files")(0)
                     .FileName = File("filename")
-                    .DownloadUrls = New List(Of String) From {File("url"), DlSourceModGet(File("url"))}.Distinct.ToList '同时添加了镜像源
+                    .DownloadUrls = New List(Of String) From {File("url")}
                     .Size = File("size")
                     .Hash = File("hashes")("sha1")?.ToString.Lower()
                 End If
@@ -297,7 +296,18 @@ Public Class ResourceVersion
             .DownloadCount = Data("DownloadCount").ToObject(Of Integer)
             .ReleaseType = Data("ReleaseType").ToObject(Of ReleaseTypes)
             If Data.ContainsKey("FileName") Then .FileName = Data("FileName").ToString
-            If Data.ContainsKey("DownloadUrls") Then .DownloadUrls = Data("DownloadUrls").ToObject(Of List(Of String))
+            If Data.ContainsKey("DownloadUrls") Then
+                '旧缓存可能包含镜像地址，仅保留资源平台的官方 CDN。
+                Dim CachedUrls = If(Data("DownloadUrls").ToObject(Of List(Of String)), New List(Of String))
+                .DownloadUrls = CachedUrls.Where(
+                    Function(Url)
+                        Dim Address As Uri = Nothing
+                        Return Uri.TryCreate(Url, UriKind.Absolute, Address) AndAlso
+                            Address.Scheme = Uri.UriSchemeHttps AndAlso
+                            (Address.Host = "cdn.modrinth.com" OrElse Address.Host.EndsWith(".forgecdn.net", StringComparison.OrdinalIgnoreCase))
+                    End Function).ToList()
+                If Not .DownloadUrls.Any() Then .DownloadUrls = Nothing
+            End If
             If Data.ContainsKey("ModLoaders") Then .ModLoaders = Data("ModLoaders").ToObject(Of ModLoaders)
             If Data.ContainsKey("Size") Then .Size = Data("Size").ToObject(Of Integer)
             If Data.ContainsKey("Hash") Then .Hash = Data("Hash").ToString

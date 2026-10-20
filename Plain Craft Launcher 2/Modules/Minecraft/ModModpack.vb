@@ -8,10 +8,6 @@ Public Module ModModpack
     ''' 弹窗要求选择一个整合包文件并进行安装。
     ''' </summary>
     Public Sub ModpackInstall()
-        If RestrictMcDownload Then
-            Hint("为遵守相关法律法规，PCL 暂时不再提供 MC 下载功能，非常抱歉 qwq……", HintType.Red)
-            Return
-        End If
         Dim File As String = Dialogs.SelectFile("选择整合包压缩文件", False, filter:={({"rar", "zip", "mrpack"}, "整合包文件")}).FirstOrDefault() '选择整合包文件
         If String.IsNullOrEmpty(File) Then Return
         RunInThread(
@@ -85,7 +81,6 @@ Public Module ModModpack
                 End If
             End Try
             '执行对应的安装方法
-            If RestrictMcDownload Then Throw New Exception("为遵守相关法律法规，PCL 暂时不再提供 MC 下载功能，非常抱歉 qwq……")
             Select Case PackType
                 Case 0
                     Logger.Info("整合包种类：CurseForge")
@@ -428,7 +423,6 @@ Public Module ModModpack
             End If
             '添加下载文件
             Dim Urls = File("downloads").SelectMany(Function(t) ResourceVersion.ParseCurseForgeDownloadUrls(t.ToString)).ToList
-            Urls.AddRange(Urls.Select(Function(u) DlSourceModGet(u)).ToList)
             Urls = ResourceVersion.ParseModrinthTrackArguments(Urls,
                 ResourceVersion.DownloadReason.ModPack, TargetVersion.VanillaName, TargetVersion.ModLoaders).ToList 'Modrinth 来源追踪信息
             Urls = Urls.Distinct.ToList()
@@ -728,9 +722,9 @@ Public Module ModModpack
             Dim MinecraftVersion = Addons("game")
             If MinecraftVersion.EndsWithF(".0") Then MinecraftVersion = MinecraftVersion.Substring(0, MinecraftVersion.Length - 2)
             Dim OptiFineFileSuffix = "_HD_" & Addons("optifine").AfterLast("HD_") & ".jar"
-            '从镜像源拉取 OptiFine 列表
-            If DlOptiFineListBmclapiLoader.State <> LoadState.Finished Then DlOptiFineListBmclapiLoader.WaitForExit()
-            Dim Entry = DlOptiFineListBmclapiLoader.Output.Value.FirstOrDefault(
+            '从 OptiFine 官方源拉取列表
+            If DlOptiFineListOfficialLoader.State <> LoadState.Finished Then DlOptiFineListOfficialLoader.WaitForExit()
+            Dim Entry = DlOptiFineListOfficialLoader.Output.Value.FirstOrDefault(
                 Function(v) v.Inherit = MinecraftVersion AndAlso v.FileName.EndsWithF(OptiFineFileSuffix))
             If Entry Is Nothing Then Throw New Exception($"OptiFine 列表中没有整合包所需的 OptiFine {Addons("optifine")}（Minecraft {Addons("game")}）")
             OptiFineEntry = JObject.FromObject(Entry)
