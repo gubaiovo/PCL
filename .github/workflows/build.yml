@@ -84,21 +84,27 @@ jobs:
       - name: Build launcher
         run: msbuild 'Plain Craft Launcher 2/Plain Craft Launcher 2.vbproj' /m /p:Configuration=${{ matrix.configuration }} /verbosity:minimal
 
-      - name: Verify updater is disabled
+      - name: Prepare single EXE
         shell: pwsh
         run: |
-          $launcherPath = Join-Path $env:GITHUB_WORKSPACE 'Plain Craft Launcher 2/bin/Plain Craft Launcher 2.exe'
-          $process = Start-Process -FilePath $launcherPath -ArgumentList '--update' -WindowStyle Hidden -PassThru
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          Copy-Item -LiteralPath 'Plain Craft Launcher 2/bin/Plain Craft Launcher 2.exe' -Destination 'dist/PCL-fix-network-${{ matrix.configuration }}.exe'
+
+      - name: Verify standalone EXE rejects updates
+        shell: pwsh
+        run: |
+          $launcherPath = Join-Path $env:GITHUB_WORKSPACE 'dist/PCL-fix-network-${{ matrix.configuration }}.exe'
+          $process = Start-Process -FilePath $launcherPath -WorkingDirectory (Split-Path -Parent $launcherPath) -ArgumentList '--update' -WindowStyle Hidden -PassThru
           if (-not $process.WaitForExit(15000)) {
             $process.Kill()
             throw 'The disabled update command did not exit.'
           }
           if ($process.ExitCode -ne 4) { throw "Expected cancellation (4), received $($process.ExitCode)." }
 
-      - name: Upload build
+      - name: Upload single EXE
         uses: actions/upload-artifact@v7
         with:
-          name: PCL-fix-network-${{ matrix.configuration }}-${{ github.sha }}
-          path: Plain Craft Launcher 2/bin/
+          path: dist/PCL-fix-network-${{ matrix.configuration }}.exe
+          archive: false
           if-no-files-found: error
           retention-days: 30

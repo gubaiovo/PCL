@@ -11,8 +11,9 @@
 
 在本仓库的 [Actions](https://github.com/gubaiovo/PCL/actions/workflows/build.yml) 中选择
 `Build` 工作流和 `fix-network` 分支，执行 `Run workflow`；向此分支推送代码也会触发构建。
-完成后下载名称以 `PCL-fix-network-Release-` 开头的构建产物，解压后运行其中的启动器。
-工作流同时提供 Debug 产物，包含完整输出目录以保留运行依赖。
+完成后直接下载并运行 `PCL-fix-network-Release.exe`，无需解压或附带 DLL。
+工作流同时提供 `PCL-fix-network-Debug.exe`。CI 会从仅包含 EXE 的分发目录运行更新禁用检查。
+目标电脑仍需安装 .NET Framework 4.8，运行时会生成配置与缓存文件。
 
 微软登录仍需自行注册的 Client ID；CurseForge 官方 API 仍需有效 API Key。
 可在构建仓库设置 `CLIENT_ID`、`CURSEFORGE_API_KEY` Secrets，或在运行环境设置
